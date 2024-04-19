@@ -6,7 +6,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 
-from data_wrapper import DataWrapper
+from data_wrapper import DialogueDatasetWrapper
 
 ERC_DATASET_PATHS = {
     "train": "data/erc/MaSaC_train_erc.json",
@@ -28,10 +28,9 @@ EMOTIONS_ERC = {
 
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, test_dataset_path = _get_dataset_paths(args.experiment_name)
-    train_dataloader = _create_dataloader(train_dataset_path, args.batch_size, args.shuffle)
-    val_dataloader = _create_dataloader(val_dataset_path, args.batch_size, args.shuffle)
-    test_dataloader = _create_dataloader(test_dataset_path, args.batch_size, args.shuffle)
-    return train_dataloader, val_dataloader, test_dataloader
+    train_dataloader = _create_dataloader(train_dataset_path, args.batch_size, shuffle=True)
+    val_dataloader = _create_dataloader(val_dataset_path, args.batch_size, shuffle=False)
+    return train_dataloader, val_dataloader
 
 
 def _tokenize(text):
@@ -78,6 +77,9 @@ def _create_dataloader(test_dataset_path, batch_size, shuffle):
     # Concatenate utterances with emotions
     assert len(padded_sequences) == len(encoded_emotions)
 
-    wrapped_dataset = DataWrapper(data=padded_sequences, labels=encoded_emotions)
+    wrapped_dataset = DialogueDatasetWrapper(data=padded_sequences, labels=encoded_emotions, vocab_size=vocab_size)
     dataloader = DataLoader(wrapped_dataset, batch_size=batch_size, shuffle=shuffle)
     return dataloader
+
+
+# _create_dataloader("data/erc/MaSaC_train_erc.json", batch_size=4, shuffle=False)

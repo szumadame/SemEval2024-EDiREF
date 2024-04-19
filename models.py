@@ -7,7 +7,7 @@ import torch.nn as nn
 vocab_size = 10000  # Example vocabulary size
 embedding_dim = 300
 hidden_dim = 256
-output_dim = 6  # Number of emotions
+output_dim = 8  # Number of emotions
 
 
 class LSTM(nn.Module):

@@ -1,10 +1,12 @@
 from torch.utils.data import Dataset
 
 
-class DataWrapper(Dataset):
-    def __init__(self, data, labels):
+class DialogueDatasetWrapper(Dataset):
+    def __init__(self, data, labels, vocab_size):
         self.data = data
         self.labels = labels
+        self.vocab_size = vocab_size
+        self.distinct_labels_count = len(set(labels))
 
     def __len__(self):
         return len(self.labels)
