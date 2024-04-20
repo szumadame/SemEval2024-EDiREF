@@ -6,12 +6,11 @@ import torch.nn as nn
 from torch import optim
 
 
-def train(model, train_dataloader, device):
+def train(model, train_dataloader, n_epochs, device):
     model.train()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    n_epochs = 100
     for epoch in range(n_epochs):
         losses = []
         correctly_predicted = 0
@@ -34,7 +33,7 @@ def train(model, train_dataloader, device):
                 total_samples += len(y)
                 losses.append(loss.item())
 
-        print("Epoch: {}/{}, loss: {}, Acc: {} %, in: {} s"
+        print("Epoch: {}/{}, loss: {}, accuracy: {} %, took: {} s"
               .format(epoch, n_epochs,
                       np.round(np.mean(losses), 3),
                       np.round(correctly_predicted * 100 / total_samples, 3),

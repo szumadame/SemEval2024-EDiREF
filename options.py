@@ -6,7 +6,8 @@ def get_args(argv):
 
     # General
     parser.add_argument('--experiment_name', type=str, default='default_run', help='Name of current experiment')
-    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--seed', type=int, required=False,
                         help="Random seed. If defined all random operations will be reproducible")
     parser.add_argument('--gpuid', nargs="+", type=int, default=[0],

@@ -27,9 +27,8 @@ EMOTIONS_ERC = {
 
 
 def get_dataloaders(args):
-    train_dataset_path, val_dataset_path, test_dataset_path = _get_dataset_paths(args.experiment_name)
-    train_dataloader = _create_dataloader(train_dataset_path, args.batch_size, shuffle=True)
-    val_dataloader = _create_dataloader(val_dataset_path, args.batch_size, shuffle=False)
+    train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
+    train_dataloader, val_dataloader = _create_dataloader(train_dataset_path, val_dataset_path, args.batch_size)
     return train_dataloader, val_dataloader
 
 
@@ -42,10 +41,7 @@ def _get_dataset_paths(experiment_name):
         return ERC_DATASET_PATHS["train"], ERC_DATASET_PATHS["val"], ERC_DATASET_PATHS["test"]
 
 
-def _create_dataloader(test_dataset_path, batch_size, shuffle):
-    with open(test_dataset_path) as f:
-        dataset = json.load(f)
-
+def _extract_relevant_data(dataset):
     # Extract all utterances and emotions
     utterance_list = []
     emotions_list = []
@@ -59,9 +55,21 @@ def _create_dataloader(test_dataset_path, batch_size, shuffle):
 
     # Encode emotions
     encoded_emotions = [EMOTIONS_ERC[emotion] for emotion in emotions_list]
+    return encoded_emotions, tokenized_utterances
 
-    # Build the vocabulary
-    vocab = Counter(word for utterance in tokenized_utterances for word in utterance)
+
+def _create_dataloader(train_dataset_path, test_dataset_path, batch_size):
+    with open(train_dataset_path) as f:
+        train_dataset = json.load(f)
+
+    with open(test_dataset_path) as f:
+        test_dataset = json.load(f)
+
+    train_encoded_emotions, train_tokenized_utterances = _extract_relevant_data(train_dataset)
+    test_encoded_emotions, test_tokenized_utterances = _extract_relevant_data(test_dataset)
+
+    # Build the vocabulary based on the training dataset
+    vocab = Counter(word for utterance in train_tokenized_utterances for word in utterance)
 
     # Assign an index to each word in the vocabulary starting from 2
     # We reserve '0' for padding and '1' for unknown words
@@ -69,14 +77,23 @@ def _create_dataloader(test_dataset_path, batch_size, shuffle):
     vocab_size = len(word_to_index) + 2  # Including padding and unknown word tokens
 
     # Convert the tokenized utterances to integer sequences
-    sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in tokenized_utterances]
+    train_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in train_tokenized_utterances]
+    test_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in test_tokenized_utterances]
 
     # Pad the sequences to have equal length
-    padded_sequences = pad_sequence([torch.tensor(seq) for seq in sequences], batch_first=True, padding_value=0)
+    train_padded_sequences = pad_sequence([torch.tensor(seq) for seq in train_sequences], batch_first=True,
+                                          padding_value=0)
+    test_padded_sequences = pad_sequence([torch.tensor(seq) for seq in test_sequences], batch_first=True,
+                                         padding_value=0)
 
     # Concatenate utterances with emotions
-    assert len(padded_sequences) == len(encoded_emotions)
+    assert len(train_padded_sequences) == len(train_encoded_emotions)
+    assert len(test_padded_sequences) == len(test_encoded_emotions)
 
-    wrapped_dataset = DialogueDatasetWrapper(data=padded_sequences, labels=encoded_emotions, vocab_size=vocab_size)
-    dataloader = DataLoader(wrapped_dataset, batch_size=batch_size, shuffle=shuffle)
-    return dataloader
+    train_wrapped_dataset = DialogueDatasetWrapper(data=train_padded_sequences, labels=train_encoded_emotions,
+                                                   vocab_size=vocab_size)
+    test_wrapped_dataset = DialogueDatasetWrapper(data=test_padded_sequences, labels=test_encoded_emotions,
+                                                  vocab_size=vocab_size)
+    train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_wrapped_dataset, batch_size=batch_size, shuffle=False)
+    return train_dataloader, test_dataloader
