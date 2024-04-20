@@ -80,6 +80,3 @@ def _create_dataloader(test_dataset_path, batch_size, shuffle):
     wrapped_dataset = DialogueDatasetWrapper(data=padded_sequences, labels=encoded_emotions, vocab_size=vocab_size)
     dataloader = DataLoader(wrapped_dataset, batch_size=batch_size, shuffle=shuffle)
     return dataloader
-
-
-# _create_dataloader("data/erc/MaSaC_train_erc.json", batch_size=4, shuffle=False)
