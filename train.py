@@ -8,9 +8,9 @@ from torch import optim
 
 def train(model, train_dataloader, n_epochs, device, lr):
     model.train()
-    class_weights = [1.0, 0.1, 0.8, 0.7, 0.8, 0.3, 0.8, 0.8]
-    class_weights_tensor = torch.FloatTensor(class_weights).cuda()
-    criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
+    # class_weights = train_dataloader.dataset.get_class_weights()
+    # class_weights_tensor = torch.FloatTensor(class_weights).cuda()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(n_epochs):

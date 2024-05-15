@@ -4,7 +4,7 @@ from collections import Counter
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 from data_wrapper import DialogueDatasetWrapper
 
@@ -86,14 +86,19 @@ def _create_dataloader(train_dataset_path, test_dataset_path, batch_size):
     test_padded_sequences = pad_sequence([torch.tensor(seq) for seq in test_sequences], batch_first=True,
                                          padding_value=0)
 
-    # Concatenate utterances with emotions
     assert len(train_padded_sequences) == len(train_encoded_emotions)
     assert len(test_padded_sequences) == len(test_encoded_emotions)
 
+    # Concatenate utterances with emotions
     train_wrapped_dataset = DialogueDatasetWrapper(data=train_padded_sequences, labels=train_encoded_emotions,
                                                    vocab_size=vocab_size)
     test_wrapped_dataset = DialogueDatasetWrapper(data=test_padded_sequences, labels=test_encoded_emotions,
                                                   vocab_size=vocab_size)
-    train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
+
+    # Create weighted random sampler to counteract the imbalanced dataset
+    weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.get_class_weights(), num_samples=len(train_wrapped_dataset))
+
+    # train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)
     test_dataloader = DataLoader(test_wrapped_dataset, batch_size=batch_size, shuffle=False)
     return train_dataloader, test_dataloader
