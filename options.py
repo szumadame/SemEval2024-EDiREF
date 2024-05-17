@@ -6,6 +6,7 @@ def get_args(argv):
 
     # General
     parser.add_argument('--experiment_name', type=str, default='default_run', help='Name of current experiment')
+    parser.add_argument('--model', type=str, default='lstm', help='Network model')
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-5)

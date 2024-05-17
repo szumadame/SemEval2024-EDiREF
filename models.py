@@ -1,6 +1,16 @@
 import torch.nn as nn
 
 
+def create_model(model_name, vocab_size, output_dim):
+    if model_name == "lstm":
+        return LSTM(vocab_size=vocab_size, embedding_dim=300, hidden_dim=256, output_dim=output_dim)
+    elif model_name == "transformer":
+        return EncoderClassifier(vocab_size=vocab_size, embedding_dim=300, num_layers=3, num_heads=4,
+                                 output_dim=output_dim)
+    else:
+        raise NotImplemented
+
+
 class LSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim):
         super(LSTM, self).__init__()
