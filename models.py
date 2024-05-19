@@ -1,6 +1,7 @@
 import torch.nn as nn
 from transformers import BertModel
 
+
 def create_model(model_name, vocab_size, output_dim):
     if model_name == "lstm":
         return LSTM(vocab_size=vocab_size, embedding_dim=300, hidden_dim=256, output_dim=output_dim)
@@ -8,7 +9,7 @@ def create_model(model_name, vocab_size, output_dim):
         return EncoderClassifier(vocab_size=vocab_size, embedding_dim=300, num_layers=3, num_heads=4,
                                  output_dim=output_dim)
     elif model_name == "bert":
-        return BertModel.from_pretrained("bert-base-multilingual-cased")
+        return BERTClassifier("bert-base-multilingual-cased", output_dim=output_dim)
     else:
         raise NotImplemented
 
@@ -26,6 +27,20 @@ class LSTM(nn.Module):
         hidden = hidden[-1, :, :]  # Get the last layer's hidden state
         out = self.fc(hidden.squeeze(0))
         return out
+
+
+class BERTClassifier(nn.Module):
+    def __init__(self, bert_model_name, output_dim):
+        super(BERTClassifier, self).__init__()
+        self.bert = BertModel.from_pretrained(bert_model_name)
+        self.dropout = nn.Dropout(0.1)
+        self.fc = nn.Linear(self.bert.config.hidden_size, output_dim)
+
+    def forward(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs.pooler_output
+        x = self.dropout(pooled_output)
+        return self.fc(x)
 
 
 class EncoderClassifier(nn.Module):

@@ -26,26 +26,22 @@ EMOTIONS_ERC = {
     "surprise": 7
 }
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
-
 
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
-    train_dataloader, val_dataloader = _create_dataloader(train_dataset_path, val_dataset_path, args.batch_size)
-    return train_dataloader, val_dataloader
-
-
-def _tokenize(text):
-    return text.split()
-
-
-def _tokenize_bert(text):
-    return tokenizer(text, return_tensors='pt')
+    if args.model == "lstm":
+        return _create_dataloader_lstm(train_dataset_path, val_dataset_path, args.batch_size)
+    elif args.model == "bert":
+        return _create_dataloader_bert(train_dataset_path, val_dataset_path, args.batch_size)
 
 
 def _get_dataset_paths(experiment_name):
     if experiment_name == "erc":
         return ERC_DATASET_PATHS["train"], ERC_DATASET_PATHS["val"], ERC_DATASET_PATHS["test"]
+
+
+def _tokenize(text):
+    return text.split()
 
 
 def _extract_relevant_data(dataset):
@@ -58,7 +54,6 @@ def _extract_relevant_data(dataset):
 
     # Tokenize utterances and remove punctuation
     tokenized_utterances = [_tokenize(utt.lower()) for utt in utterance_list]
-    tokenized_bert_utterances = [_tokenize_bert(utt) for utt in utterance_list]
     tokenized_utterances = [[word.strip(string.punctuation) for word in sublist] for sublist in tokenized_utterances]
 
     # Encode emotions
@@ -66,7 +61,7 @@ def _extract_relevant_data(dataset):
     return encoded_emotions, tokenized_utterances
 
 
-def _create_dataloader(train_dataset_path, test_dataset_path, batch_size):
+def _create_dataloader_lstm(train_dataset_path, test_dataset_path, batch_size):
     with open(train_dataset_path) as f:
         train_dataset = json.load(f)
 
@@ -104,10 +99,52 @@ def _create_dataloader(train_dataset_path, test_dataset_path, batch_size):
                                                   vocab_size=vocab_size)
 
     # Create weighted random sampler to counteract the imbalanced dataset
-    weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.get_class_weights(),
+    weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,
                                                     num_samples=len(train_wrapped_dataset))
 
     # train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
     train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)
+    test_dataloader = DataLoader(test_wrapped_dataset, batch_size=batch_size, shuffle=False)
+    return train_dataloader, test_dataloader
+
+
+def _extract_relevant_data_bert(dataset):
+    # Extract all utterances and emotions
+    utterance_list = []
+    emotions_list = []
+    for dialogue in dataset:
+        utterance_list = utterance_list + dialogue["utterances"]
+        emotions_list = emotions_list + dialogue["emotions"]
+
+    # Encode emotions
+    encoded_emotions_list = [EMOTIONS_ERC[emotion] for emotion in emotions_list]
+    return encoded_emotions_list, utterance_list
+
+
+def _create_dataloader_bert(train_dataset_path, test_dataset_path, batch_size):
+    with open(train_dataset_path) as f:
+        train_dataset = json.load(f)
+
+    with open(test_dataset_path) as f:
+        test_dataset = json.load(f)
+
+    train_encoded_emotions, train_utterances = _extract_relevant_data_bert(train_dataset)
+    test_encoded_emotions, test_utterances = _extract_relevant_data_bert(test_dataset)
+
+    # Get pretrained BERT tokenizer
+    tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+
+    # Concatenate utterances with emotions
+    train_wrapped_dataset = DialogueDatasetWrapper(data=train_utterances, labels=train_encoded_emotions,
+                                                   vocab_size=None, max_length=None, tokenizer=tokenizer)
+    test_wrapped_dataset = DialogueDatasetWrapper(data=test_utterances, labels=test_encoded_emotions,
+                                                  vocab_size=None, max_length=None, tokenizer=tokenizer)
+
+    # Create weighted random sampler to counteract the imbalanced dataset
+    # weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,
+    #                                                 num_samples=len(train_wrapped_dataset))
+
+    # train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)
+    train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
     test_dataloader = DataLoader(test_wrapped_dataset, batch_size=batch_size, shuffle=False)
     return train_dataloader, test_dataloader
