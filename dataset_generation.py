@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from transformers import BertTokenizer
 
-from data_wrapper import DialogueDatasetWrapper
+from data_wrapper import DialogueDatasetWrapperForBERT, DialogueDatasetWrapperForLSTM
 
 ERC_DATASET_PATHS = {
     "train": "data/erc/MaSaC_train_erc.json",
@@ -93,10 +93,10 @@ def _create_dataloader_lstm(train_dataset_path, test_dataset_path, batch_size):
     assert len(test_padded_sequences) == len(test_encoded_emotions)
 
     # Concatenate utterances with emotions
-    train_wrapped_dataset = DialogueDatasetWrapper(data=train_padded_sequences, labels=train_encoded_emotions,
-                                                   vocab_size=vocab_size)
-    test_wrapped_dataset = DialogueDatasetWrapper(data=test_padded_sequences, labels=test_encoded_emotions,
-                                                  vocab_size=vocab_size)
+    train_wrapped_dataset = DialogueDatasetWrapperForLSTM(data=train_padded_sequences, labels=train_encoded_emotions,
+                                                          vocab_size=vocab_size)
+    test_wrapped_dataset = DialogueDatasetWrapperForLSTM(data=test_padded_sequences, labels=test_encoded_emotions,
+                                                         vocab_size=vocab_size)
 
     # Create weighted random sampler to counteract the imbalanced dataset
     weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,
@@ -135,10 +135,10 @@ def _create_dataloader_bert(train_dataset_path, test_dataset_path, batch_size):
     tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
 
     # Concatenate utterances with emotions
-    train_wrapped_dataset = DialogueDatasetWrapper(data=train_utterances, labels=train_encoded_emotions,
-                                                   vocab_size=None, max_length=None, tokenizer=tokenizer)
-    test_wrapped_dataset = DialogueDatasetWrapper(data=test_utterances, labels=test_encoded_emotions,
-                                                  vocab_size=None, max_length=None, tokenizer=tokenizer)
+    train_wrapped_dataset = DialogueDatasetWrapperForBERT(data=train_utterances, labels=train_encoded_emotions,
+                                                          vocab_size=None, max_length=None, tokenizer=tokenizer)
+    test_wrapped_dataset = DialogueDatasetWrapperForBERT(data=test_utterances, labels=test_encoded_emotions,
+                                                         vocab_size=None, max_length=None, tokenizer=tokenizer)
 
     # Create weighted random sampler to counteract the imbalanced dataset
     # weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,

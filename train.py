@@ -20,25 +20,25 @@ def train(model, train_dataloader, n_epochs, device, lr):
         start = time.time()
 
         for batch in train_dataloader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['label'].to(device)
+            # input_ids = batch['input_ids'].to(device)
+            # attention_mask = batch['attention_mask'].to(device)
+            # labels = batch['label'].to(device)
 
-            # x, y = batch
-            # x = x.to(device)
-            # y = y.to(device)
+            x, y = batch
+            x = x.to(device)
+            y = y.to(device)
 
             optimizer.zero_grad()
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            # outputs = model(x)
-            # loss = criterion(outputs.squeeze(), y)
-            loss = criterion(outputs, labels)
+            # outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            # loss = criterion(outputs, labels)
+            outputs = model(x)
+            loss = criterion(outputs.squeeze(), y)
             loss.backward()
             optimizer.step()
 
             with torch.no_grad():
-                correctly_predicted += (get_correct_sum(outputs, labels)).item()
-                total_samples += len(labels)
+                correctly_predicted += (get_correct_sum(outputs, y)).item()
+                total_samples += len(y)
                 losses.append(loss.item())
 
         print("Epoch: {}/{}, loss: {}, accuracy: {} %, took: {} s"
