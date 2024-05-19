@@ -5,6 +5,7 @@ from collections import Counter
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, WeightedRandomSampler
+from transformers import BertTokenizer
 
 from data_wrapper import DialogueDatasetWrapper
 
@@ -25,6 +26,8 @@ EMOTIONS_ERC = {
     "surprise": 7
 }
 
+tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+
 
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
@@ -34,6 +37,10 @@ def get_dataloaders(args):
 
 def _tokenize(text):
     return text.split()
+
+
+def _tokenize_bert(text):
+    return tokenizer(text, return_tensors='pt')
 
 
 def _get_dataset_paths(experiment_name):
@@ -51,6 +58,7 @@ def _extract_relevant_data(dataset):
 
     # Tokenize utterances and remove punctuation
     tokenized_utterances = [_tokenize(utt.lower()) for utt in utterance_list]
+    tokenized_bert_utterances = [_tokenize_bert(utt) for utt in utterance_list]
     tokenized_utterances = [[word.strip(string.punctuation) for word in sublist] for sublist in tokenized_utterances]
 
     # Encode emotions
@@ -96,7 +104,8 @@ def _create_dataloader(train_dataset_path, test_dataset_path, batch_size):
                                                   vocab_size=vocab_size)
 
     # Create weighted random sampler to counteract the imbalanced dataset
-    weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.get_class_weights(), num_samples=len(train_wrapped_dataset))
+    weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.get_class_weights(),
+                                                    num_samples=len(train_wrapped_dataset))
 
     # train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
     train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)

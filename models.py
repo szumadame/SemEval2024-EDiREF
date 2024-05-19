@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+from transformers import BertModel
 
 def create_model(model_name, vocab_size, output_dim):
     if model_name == "lstm":
@@ -7,6 +7,8 @@ def create_model(model_name, vocab_size, output_dim):
     elif model_name == "transformer":
         return EncoderClassifier(vocab_size=vocab_size, embedding_dim=300, num_layers=3, num_heads=4,
                                  output_dim=output_dim)
+    elif model_name == "bert":
+        return BertModel.from_pretrained("bert-base-multilingual-cased")
     else:
         raise NotImplemented
 
