@@ -1,5 +1,5 @@
 import torch
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 
 
 def evaluate(model, test_dataloader, device):
@@ -19,4 +19,4 @@ def evaluate(model, test_dataloader, device):
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(y.cpu().tolist())
 
-    return accuracy_score(actual_labels, predictions)
+    return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions)

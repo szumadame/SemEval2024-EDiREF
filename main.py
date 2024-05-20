@@ -1,11 +1,11 @@
 import sys
 
+import train
 from dataset_generation import get_dataloaders
 from evaluate import evaluate
 from models import create_model
 from options import get_args
 from setup import setup_devices
-import train
 
 
 def run(args):
@@ -20,6 +20,10 @@ def run(args):
                                        test_dataloader=val_dataloader,
                                        device=device,
                                        args=args)
+
+    _, classification_report = evaluate(model=model, test_dataloader=val_dataloader, device=device)
+    print(f'\nFinal evaluation')
+    print(f'Classification report:\n {classification_report}')
 
 
 if __name__ == "__main__":
