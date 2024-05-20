@@ -47,11 +47,11 @@ def lstm(model, train_dataloader, test_dataloader, device, args):
 
         print("Training loss: {}, accuracy: {} %"
               .format(np.round(np.mean(losses), 3),
-                      np.round(accuracy_score(actual_labels, predictions), 3)))
+                      np.round(accuracy_score(actual_labels, predictions) * 100, 3)))
 
         val_accuracy, _ = evaluate(model=model, test_dataloader=test_dataloader, device=device)
         print("Validation accuracy: {} %"
-              .format(np.round(val_accuracy, 3)))
+              .format(np.round(val_accuracy * 100, 3)))
 
     return model
 
@@ -94,10 +94,10 @@ def bert(model, train_dataloader, test_dataloader, device, args):
 
         print("Training loss: {}, accuracy: {} %"
               .format(np.round(np.mean(losses), 3),
-                      np.round(accuracy_score(actual_labels, predictions), 3)))
+                      np.round(accuracy_score(actual_labels, predictions) * 100, 3)))
 
         val_accuracy, _ = evaluate(model=model, test_dataloader=test_dataloader, device=device)
         print("Validation accuracy: {} %"
-              .format(np.round(val_accuracy, 3)))
+              .format(np.round(val_accuracy * 100, 3)))
 
     return model
