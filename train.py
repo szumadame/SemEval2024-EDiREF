@@ -3,20 +3,23 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import accuracy_score, classification_report
 from torch import optim
+from evaluate import evaluate
 
 
-def train(model, train_dataloader, n_epochs, device, lr):
+def lstm(model, train_dataloader, test_dataloader, device, args):
     model.train()
     # class_weights = train_dataloader.dataset.get_class_weights()
     # class_weights_tensor = torch.FloatTensor(class_weights).cuda()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    for epoch in range(n_epochs):
+    for epoch in range(args.n_epochs):
+        model.train()
+        predictions = []
+        actual_labels = []
         losses = []
-        correctly_predicted = 0
-        total_samples = 0
         start = time.time()
 
         for batch in train_dataloader:
@@ -37,20 +40,25 @@ def train(model, train_dataloader, n_epochs, device, lr):
             optimizer.step()
 
             with torch.no_grad():
-                correctly_predicted += (get_correct_sum(outputs, y)).item()
-                total_samples += len(y)
+                _, preds = torch.max(outputs, dim=1)
+                predictions.extend(preds.cpu().tolist())
+                actual_labels.extend(y.cpu().tolist())
                 losses.append(loss.item())
 
-        print("Epoch: {}/{}, loss: {}, accuracy: {} %, took: {} s"
-              .format(epoch, n_epochs,
-                      np.round(np.mean(losses), 3),
-                      np.round(correctly_predicted * 100 / total_samples, 3),
+        print("\nEpoch: {}/{} [{} s]"
+              .format(epoch,
+                      args.n_epochs,
                       np.round(time.time() - start), 3))
 
+        print("Training loss: {}, accuracy: {} %"
+              .format(np.round(np.mean(losses), 3),
+                      np.round(accuracy_score(actual_labels, predictions), 3)))
+
+        val_accuracy = evaluate(model=model, test_dataloader=test_dataloader, device=device)
+        print("Validation accuracy: {} %"
+              .format(np.round(val_accuracy, 3)))
+
+        if args.create_classification_report:
+            print(f'Classification report:\n {classification_report(actual_labels, predictions)}')
+
     return model
-
-
-def get_correct_sum(y_pred, y_test):
-    _, y_pred_tag = torch.max(y_pred, 1)
-    correct_results_sum = (y_pred_tag == y_test).sum().float()
-    return correct_results_sum

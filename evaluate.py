@@ -1,26 +1,22 @@
-import numpy as np
 import torch
+from sklearn.metrics import accuracy_score
 
 
 def evaluate(model, test_dataloader, device):
     model.eval()
-    correctly_predicted = 0
-    total_samples = 0
+    predictions = []
+    actual_labels = []
 
-    for iteration, batch in enumerate(test_dataloader):
-        x, y = batch
-        x = x.to(device)
-        y = y.to(device)
+    with torch.no_grad():
+        for iteration, batch in enumerate(test_dataloader):
+            x, y = batch
+            x = x.to(device)
+            y = y.to(device)
 
-        outputs = model(x)
+            outputs = model(x)
 
-        correctly_predicted += (get_correct_sum(outputs, y)).item()
-        total_samples += len(y)
+            _, preds = torch.max(outputs, dim=1)
+            predictions.extend(preds.cpu().tolist())
+            actual_labels.extend(y.cpu().tolist())
 
-    print("Test accuracy: {} %".format(np.round(correctly_predicted * 100 / total_samples, 3)))
-
-
-def get_correct_sum(y_pred, y_test):
-    _, y_pred_tag = torch.max(y_pred, 1)
-    correct_results_sum = (y_pred_tag == y_test).sum().float()
-    return correct_results_sum
+    return accuracy_score(actual_labels, predictions)
