@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import Dataset
 
 
@@ -25,9 +27,7 @@ class DialogueDatasetWrapper(Dataset):
                 'label': torch.tensor(label)}
 
     def __compute_class_weights(self):
-        weights_idx = []
-        for i in range(self.distinct_labels_count):
-            weights_idx.append(len(self.labels) / self.class_distribution[1][i])
+        weights_idx = compute_class_weight(class_weight="balanced", classes=np.unique(self.labels), y=self.labels)
 
         weights = []
         for _, label in enumerate(self.labels):
