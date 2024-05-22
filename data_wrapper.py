@@ -27,8 +27,7 @@ class DialogueDatasetWrapper(Dataset):
     def __compute_class_weights(self):
         weights_idx = []
         for i in range(self.distinct_labels_count):
-            weights_idx.append(1 / self.class_distribution[1][i])
-            # weights.append(len(self.labels) / self.class_distribution[1][i])
+            weights_idx.append(len(self.labels) / self.class_distribution[1][i])
 
         weights = []
         for _, label in enumerate(self.labels):

@@ -1,6 +1,6 @@
 import json
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from transformers import BertTokenizer
 
 from data_wrapper import DialogueDatasetWrapper
@@ -25,7 +25,7 @@ EMOTIONS_ERC = {
 
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
-    return _create_dataloaders(train_dataset_path, val_dataset_path, args.batch_size)
+    return _create_dataloaders(train_dataset_path, val_dataset_path, args.batch_size, args.weighted_sampler)
 
 
 def _get_dataset_paths(experiment_name):
@@ -46,7 +46,7 @@ def _extract_relevant_data(dataset):
     return encoded_emotions_list, utterance_list
 
 
-def _create_dataloaders(train_dataset_path, test_dataset_path, batch_size):
+def _create_dataloaders(train_dataset_path, test_dataset_path, batch_size, weighted_sampler=False):
     with open(train_dataset_path) as f:
         train_dataset = json.load(f)
 
@@ -68,10 +68,12 @@ def _create_dataloaders(train_dataset_path, test_dataset_path, batch_size):
                                                   tokenizer=tokenizer)
 
     # Create weighted random sampler to counteract the imbalanced dataset
-    # weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,
-    #                                                 num_samples=len(train_wrapped_dataset))
+    if weighted_sampler:
+        weighted_random_sampler = WeightedRandomSampler(weights=train_wrapped_dataset.class_weights,
+                                                        num_samples=len(train_wrapped_dataset))
+        train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)
+    else:
+        train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
 
-    # train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, sampler=weighted_random_sampler)
-    train_dataloader = DataLoader(train_wrapped_dataset, batch_size=batch_size, shuffle=True)
     test_dataloader = DataLoader(test_wrapped_dataset, batch_size=batch_size, shuffle=False)
     return train_dataloader, test_dataloader

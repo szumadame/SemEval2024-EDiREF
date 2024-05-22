@@ -10,6 +10,8 @@ def get_args(argv):
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--n_epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--weighted_sampler', type=bool, default=False,
+                        help='Use weighted random sampler to counteract the imbalanced dataset')
     parser.add_argument('--create_classification_report', type=bool, default=False,
                         help='Generate a complete classification metrics report at the end of each epoch')
     parser.add_argument('--seed', type=int, required=False,
