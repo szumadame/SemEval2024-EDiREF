@@ -2,14 +2,14 @@ import torch.nn as nn
 from transformers import BertModel
 
 
-def create_model(model_name, vocab_size, output_dim):
+def create_model(model_name, vocab_size, max_length, output_dim):
     if model_name == "lstm":
-        return LSTM(vocab_size=vocab_size, embedding_dim=300, hidden_dim=256, output_dim=output_dim)
+        return LSTM(vocab_size=vocab_size, embedding_dim=max_length, hidden_dim=256, output_dim=output_dim)
+    elif model_name == "bert":
+        return BERTClassifier("bert-base-multilingual-cased", output_dim=output_dim)
     elif model_name == "transformer":
         return EncoderClassifier(vocab_size=vocab_size, embedding_dim=300, num_layers=3, num_heads=4,
                                  output_dim=output_dim)
-    elif model_name == "bert":
-        return BERTClassifier("bert-base-multilingual-cased", output_dim=output_dim)
     else:
         raise NotImplemented
 
@@ -18,7 +18,7 @@ class LSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim):
         super(LSTM, self).__init__()
         self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=0, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=0.4, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, text):
