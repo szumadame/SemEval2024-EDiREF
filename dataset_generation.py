@@ -2,9 +2,11 @@ import json
 import string
 from collections import Counter
 from googletrans import Translator
-
+from nltk.corpus import words, wordnet
 import random
 import torch
+import nltk
+from nltk.corpus import stopwords
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from transformers import BertTokenizer, AutoTokenizer
@@ -15,12 +17,6 @@ ERC_DATASET_PATHS = {
     "train": "data/erc/MaSaC_train_erc.json",
     "val": "data/erc/MaSaC_val_erc.json",
     "test": "data/erc/MaSaC_test_erc.json"
-}
-
-EFR_DATASET_PATHS = {
-    "train": "data/efr_hin_eng/MaSaC_train_efr.json",
-    "val": "data/efr_hin_eng/MaSaC_val_efr.json",
-    "test": "data/efr_hin_eng/MaSaC_test_efr.json"
 }
 
 EMOTIONS_ERC = {
@@ -34,6 +30,11 @@ EMOTIONS_ERC = {
     "surprise": 7
 }
 
+
+nltk.download('stopwords')
+nltk.download('words')
+nltk.download('wordnet')
+english_word_set = set(words.words())
 
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
@@ -82,49 +83,53 @@ def _create_dataloader_lstm(train_dataset_path, test_dataset_path, batch_size):
 
     #train_utterences_augmentated = augmentation(train_tokenized_utterances, train_encoded_emotions)
 
+    # train_tokenized_utterances = remove_stopwords(train_tokenized_utterances)
+    #test_tokenized_utterances = remove_stopwords(test_tokenized_utterances)
+
     translated_lists, selected_labels = augmentation(train_tokenized_utterances, train_encoded_emotions)
 
     train_tokenized_utterances = train_tokenized_utterances + translated_lists
     train_encoded_emotions = train_encoded_emotions + selected_labels
 
-    tokenizer = AutoTokenizer.from_pretrained("obaidtambo/hinglish_bert_tokenizer")
-
-    train_utterances_as_strings = [" ".join(sublist) for sublist in train_tokenized_utterances]
-    test_utterances_as_strings = [" ".join(sublist) for sublist in test_tokenized_utterances]
-
-    # Tokenize the utterances using the BERT tokenizer
-    train_sequences = [tokenizer.encode(utterance, add_special_tokens=True) for utterance in
-                       train_utterances_as_strings]
-    test_sequences = [tokenizer.encode(utterance, add_special_tokens=True) for utterance in test_utterances_as_strings]
-
-    # Pad the sequences to have equal length
-    train_padded_sequences = pad_sequence([torch.tensor(seq) for seq in train_sequences], batch_first=True,
-                                          padding_value=tokenizer.pad_token_id)
-    test_padded_sequences = pad_sequence([torch.tensor(seq) for seq in test_sequences], batch_first=True,
-                                         padding_value=tokenizer.pad_token_id)
-
-    # # Build the vocabulary based on the training dataset
-    # vocab = Counter(word for utterance in train_tokenized_utterances for word in utterance)
+    # tokenizer = AutoTokenizer.from_pretrained("obaidtambo/hinglish_bert_tokenizer")
     #
-    # # Assign an index to each word in the vocabulary starting from 2
-    # # We reserve '0' for padding and '1' for unknown words
-    # word_to_index = {word: i + 2 for i, (word, _) in enumerate(vocab.items())}
-    # vocab_size = len(word_to_index) + 2  # Including padding and unknown word tokens
+    # train_utterances_as_strings = [" ".join(sublist) for sublist in train_tokenized_utterances]
+    # test_utterances_as_strings = [" ".join(sublist) for sublist in test_tokenized_utterances]
     #
-    # # Convert the tokenized utterances to integer sequences
-    # train_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in train_tokenized_utterances]
-    # test_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in test_tokenized_utterances]
+    #
+    # # Tokenize the utterances using the BERT tokenizer
+    # train_sequences = [tokenizer.encode(utterance, add_special_tokens=True) for utterance in
+    #                    train_utterances_as_strings]
+    # test_sequences = [tokenizer.encode(utterance, add_special_tokens=True) for utterance in test_utterances_as_strings]
     #
     # # Pad the sequences to have equal length
     # train_padded_sequences = pad_sequence([torch.tensor(seq) for seq in train_sequences], batch_first=True,
-    #                                       padding_value=0)
+    #                                       padding_value=tokenizer.pad_token_id)
     # test_padded_sequences = pad_sequence([torch.tensor(seq) for seq in test_sequences], batch_first=True,
-    #                                      padding_value=0)
+    #                                      padding_value=tokenizer.pad_token_id)
+
+    # Build the vocabulary based on the training dataset
+    vocab = Counter(word for utterance in train_tokenized_utterances for word in utterance)
+
+    # Assign an index to each word in the vocabulary starting from 2
+    # We reserve '0' for padding and '1' for unknown words
+    word_to_index = {word: i + 2 for i, (word, _) in enumerate(vocab.items())}
+    vocab_size = len(word_to_index) + 2  # Including padding and unknown word tokens
+
+    # Convert the tokenized utterances to integer sequences
+    train_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in train_tokenized_utterances]
+    test_sequences = [[word_to_index.get(word, 1) for word in utterance] for utterance in test_tokenized_utterances]
+
+    # Pad the sequences to have equal length
+    train_padded_sequences = pad_sequence([torch.tensor(seq) for seq in train_sequences], batch_first=True,
+                                          padding_value=0)
+    test_padded_sequences = pad_sequence([torch.tensor(seq) for seq in test_sequences], batch_first=True,
+                                         padding_value=0)
 
     assert len(train_padded_sequences) == len(train_encoded_emotions)
     assert len(test_padded_sequences) == len(test_encoded_emotions)
 
-    vocab_size = tokenizer.vocab_size
+    # vocab_size = tokenizer.vocab_size
 
     # Concatenate utterances with emotions
     train_wrapped_dataset = DialogueDatasetWrapperForLSTM(data=train_padded_sequences, labels=train_encoded_emotions,
@@ -196,20 +201,22 @@ def augmentation(utterances, labels):
 
     selected_utterances = [utterances[i] for i in selected_indices]
     selected_labels = [labels[i] for i in selected_indices]
-    print(len(utterances))
-    random_deletion_lists = []
+
+    augmentated_lists = []
     #translated_lists = []
     for sublist in selected_utterances:
         #translated_sublist = [translate_word(word) for word in sublist]
         #translated_lists.append(translated_sublist)
-        if random.random() < 0.5:
+        if random.random() < 0.8:
+            modified_sublist = synonym_insert(sublist)
+        elif random.random() < 0.5:
             modified_sublist = random_deletion(sublist)
         else:
             modified_sublist = random_swap(sublist)
 
-        random_deletion_lists.append(modified_sublist)
+        augmentated_lists.append(modified_sublist)
 
-    return random_deletion_lists, selected_labels
+    return augmentated_lists, selected_labels
 
 
 def translate_word(word, src='hi', dest='en'):
@@ -234,7 +241,7 @@ def random_deletion(words_in_list):
     if n == 1:  # return if single word
         return words_in_list
 
-    filtered_list = [word for word in words_in_list if random.random() <= 0.9]
+    filtered_list = [word for word in words_in_list if 0.1 <= random.random() <= 0.9]
     return filtered_list
 
 
@@ -242,10 +249,48 @@ def random_swap(words_in_list, n_swaps=1):
     words = words_in_list[:]
     length = len(words)
 
-    if length == 1:  # return if single word
+    if length <= 1:  # return if single word
         return words_in_list
 
     for _ in range(n_swaps):
         idx1, idx2 = random.sample(range(length), 2)
         words[idx1], words[idx2] = words[idx2], words[idx1]
     return words
+
+
+def remove_stopwords(dataset):
+    hindi_stopwords = ['hai', 'ke', 'ka', 'ki', 'main', 'tum', 'woh', 'se']
+    english_stopwords = stopwords.words('english')
+    combined_stopwords = set(hindi_stopwords + english_stopwords)
+
+    def filter_stopwords(sublist):
+        if len(sublist) == 1:
+            return sublist
+        else:
+            return [word for word in sublist if word.lower() not in combined_stopwords]
+
+    # Apply the filter function to each sublist in the dataset
+    return [filter_stopwords(sublist) for sublist in dataset]
+
+
+def synonym_insert(sublist):
+    for i, word in enumerate(sublist):
+        if word.lower() in english_word_set:
+            synonym = replace_with_synonym(word.lower())
+            if synonym:
+                sublist[i] = synonym
+
+    return sublist
+
+
+def replace_with_synonym(word):
+    synonyms = []
+    for syn in wordnet.synsets(word):
+        for lemma in syn.lemmas():
+            synonyms.append(lemma.name())
+    # Remove duplicates and original word
+    synonyms = list(set(synonyms) - {word})
+    if synonyms:
+        return synonyms[0]  # Return the first synonym
+    else:
+        return word
