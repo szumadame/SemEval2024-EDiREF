@@ -11,10 +11,10 @@ from evaluate import evaluate
 
 def lstm(model, train_dataloader, test_dataloader, device, args):
     model.train()
-    # class_weights = train_dataloader.dataset.get_class_weights()
+    # class_weights = train_dataloader.dataset.class_weights
     # class_weights_tensor = torch.FloatTensor(class_weights).cuda()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(args.n_epochs):
         model.train()

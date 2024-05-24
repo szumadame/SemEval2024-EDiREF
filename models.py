@@ -1,5 +1,6 @@
 import torch.nn as nn
 from transformers import BertModel
+import torch
 
 
 def create_model(model_name, vocab_size, output_dim):
@@ -17,15 +18,18 @@ def create_model(model_name, vocab_size, output_dim):
 class LSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim):
         super(LSTM, self).__init__()
-        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=0, batch_first=True)
+        self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=0.2, batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
+        self.act = nn.Softmax()
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.01)
 
     def forward(self, text):
         embedded = self.embedding(text)
         output, (hidden, cell) = self.lstm(embedded)
         hidden = hidden[-1, :, :]  # Get the last layer's hidden state
         out = self.fc(hidden.squeeze(0))
+        out = self.leaky_relu(out)
         return out
 
 
