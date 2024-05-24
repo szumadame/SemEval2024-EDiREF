@@ -1,9 +1,10 @@
+import copy
 import time
 
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import classification_report
 from torch import optim
 
 from evaluate import evaluate
@@ -11,6 +12,9 @@ from models import LSTM, BERTClassifier
 
 
 def train(model, train_dataloader, test_dataloader, device, args):
+    best_model = copy.deepcopy(model)
+    best_f1 = 0
+
     model.train()
     # class_weights = train_dataloader.dataset.get_class_weights()
     # class_weights_tensor = torch.FloatTensor(class_weights).cuda()
@@ -51,18 +55,23 @@ def train(model, train_dataloader, test_dataloader, device, args):
         train_results = classification_report(actual_labels, predictions, zero_division=0.0, output_dict=True)
         val_results = evaluate(model=model, test_dataloader=test_dataloader, device=device, output_dict=True)
 
+        if val_results["weighted avg"]["f1-score"] > best_f1:
+            best_model = copy.deepcopy(model)
+            best_f1 = val_results["weighted avg"]["f1-score"]
+            torch.save(model, f'models/net_latest')
+
         print("\nEpoch: {}/{} [{} s]"
               .format(epoch,
                       args.n_epochs,
                       np.round(time.time() - start), 3))
 
-        print("Training   |   accuracy: {}, weighted F1-score: {}, loss: {}"
+        print("Training   |   accuracy: {}, weighted f1-score: {}, loss: {}"
               .format(np.round(train_results["accuracy"], 3),
                       np.round(train_results["weighted avg"]["f1-score"], 3),
                       np.round(np.mean(losses), 3)))
 
-        print("Validation |   accuracy: {}, weighted F1-score: {}"
+        print("Validation |   accuracy: {}, weighted f1-score: {}"
               .format(np.round(val_results["accuracy"], 3),
                       np.round(val_results["weighted avg"]["f1-score"], 3)))
 
-    return model
+    return best_model
