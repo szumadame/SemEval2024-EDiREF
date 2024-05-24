@@ -1,10 +1,10 @@
 import torch
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import classification_report
 
 from models import LSTM, BERTClassifier
 
 
-def evaluate(model, test_dataloader, device):
+def evaluate(model, test_dataloader, device, output_dict):
     model.eval()
     predictions = []
     actual_labels = []
@@ -26,5 +26,4 @@ def evaluate(model, test_dataloader, device):
             predictions.extend(preds.cpu().tolist())
             actual_labels.extend(labels.cpu().tolist())
 
-    return accuracy_score(actual_labels, predictions), classification_report(actual_labels, predictions,
-                                                                             zero_division=0.0)
+    return classification_report(actual_labels, predictions, zero_division=0.0, output_dict=output_dict)

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
 from torch import optim
 
 from evaluate import evaluate
@@ -48,17 +48,21 @@ def train(model, train_dataloader, test_dataloader, device, args):
                 actual_labels.extend(labels.cpu().tolist())
                 losses.append(loss.item())
 
+        train_results = classification_report(actual_labels, predictions, zero_division=0.0, output_dict=True)
+        val_results = evaluate(model=model, test_dataloader=test_dataloader, device=device, output_dict=True)
+
         print("\nEpoch: {}/{} [{} s]"
               .format(epoch,
                       args.n_epochs,
                       np.round(time.time() - start), 3))
 
-        print("Training loss: {}, accuracy: {} %"
-              .format(np.round(np.mean(losses), 3),
-                      np.round(accuracy_score(actual_labels, predictions) * 100, 3)))
+        print("Training   |   accuracy: {}, weighted F1-score: {}, loss: {}"
+              .format(np.round(train_results["accuracy"], 3),
+                      np.round(train_results["weighted avg"]["f1-score"], 3),
+                      np.round(np.mean(losses), 3)))
 
-        val_accuracy, _ = evaluate(model=model, test_dataloader=test_dataloader, device=device)
-        print("Validation accuracy: {} %"
-              .format(np.round(val_accuracy * 100, 3)))
+        print("Validation |   accuracy: {}, weighted F1-score: {}"
+              .format(np.round(val_results["accuracy"], 3),
+                      np.round(val_results["weighted avg"]["f1-score"], 3)))
 
     return model

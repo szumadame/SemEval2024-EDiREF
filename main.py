@@ -23,7 +23,7 @@ def run(args):
                   device=device,
                   args=args)
 
-    _, classification_report = evaluate(model=model, test_dataloader=val_dataloader, device=device)
+    classification_report = evaluate(model=model, test_dataloader=val_dataloader, device=device, output_dict=False)
     print(f'\nFinal evaluation')
     print(f'Classification report:\n {classification_report}')
 
