@@ -58,7 +58,7 @@ def train(model, train_dataloader, test_dataloader, device, args):
         if val_results["weighted avg"]["f1-score"] > best_f1:
             best_model = copy.deepcopy(model)
             best_f1 = val_results["weighted avg"]["f1-score"]
-            torch.save(model, f'models/net_latest')
+            # torch.save(model, f'models/net_latest')
 
         print("\nEpoch: {}/{} [{} s]"
               .format(epoch,
