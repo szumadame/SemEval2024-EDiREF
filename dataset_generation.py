@@ -1,7 +1,7 @@
 import json
 import string
 from collections import Counter
-from googletrans import Translator
+from googletrans import Translator, LANGUAGES
 from nltk.corpus import words, wordnet
 import random
 import torch
@@ -81,12 +81,17 @@ def _create_dataloader_lstm(train_dataset_path, test_dataset_path, batch_size):
     train_encoded_emotions, train_tokenized_utterances = _extract_relevant_data(train_dataset)
     test_encoded_emotions, test_tokenized_utterances = _extract_relevant_data(test_dataset)
 
+
     #train_utterences_augmentated = augmentation(train_tokenized_utterances, train_encoded_emotions)
 
     # train_tokenized_utterances = remove_stopwords(train_tokenized_utterances)
     #test_tokenized_utterances = remove_stopwords(test_tokenized_utterances)
 
-    translated_lists, selected_labels = augmentation(train_tokenized_utterances, train_encoded_emotions)
+    #translated_lists, selected_labels = augmentation(train_tokenized_utterances, train_encoded_emotions)
+
+    translated_lists, selected_labels = remove_utterences(train_tokenized_utterances, train_encoded_emotions)
+    print(len(train_tokenized_utterances))
+    print(len(translated_lists))
 
     train_tokenized_utterances = train_tokenized_utterances + translated_lists
     train_encoded_emotions = train_encoded_emotions + selected_labels
@@ -194,7 +199,6 @@ def augmentation(utterances, labels):
     num_to_pick = len(utterances) * 50 // 100
     random.seed(42)
 
-    # Shuffle indices
     indices = list(range(len(utterances)))
     random.shuffle(indices)
     selected_indices = indices[:num_to_pick]
@@ -203,11 +207,12 @@ def augmentation(utterances, labels):
     selected_labels = [labels[i] for i in selected_indices]
 
     augmentated_lists = []
-    #translated_lists = []
     for sublist in selected_utterances:
-        #translated_sublist = [translate_word(word) for word in sublist]
-        #translated_lists.append(translated_sublist)
-        if random.random() < 0.8:
+        if random.random() < 0.5:
+            modified_sublist = translate_back_and_fwd(sublist)
+            augmentated_lists.append(modified_sublist)
+            continue
+        if random.random() < 0.7:
             modified_sublist = synonym_insert(sublist)
         elif random.random() < 0.5:
             modified_sublist = random_deletion(sublist)
@@ -219,26 +224,28 @@ def augmentation(utterances, labels):
     return augmentated_lists, selected_labels
 
 
-def translate_word(word, src='hi', dest='en'):
+def translate_back_and_fwd(sublist):
+    sentence_from_list = ' '.join(sublist)
+    translator = Translator()
     try:
-        translator = Translator()
-        if translator.detect(word).lang == 'en':
-            # Translate to English
-            translation = translator.translate(word, src='en', dest='hi')
-            return translation.text
-        else:
-            # If the string is not in Hindi, keep it as is
-            return word
-    except TypeError as e:
-        # Handle NoneType error
-        print("Error:", e, word)
-        return word
+        detected_language = translator.detect(sentence_from_list)
+        detected_language = detected_language.lang
+        if detected_language not in ['en', 'hi']:
+            detected_language = 'en' if random.random() < 0.5 else 'hi'
+    except ValueError:
+        detected_language = 'en' if random.random() < 0.5 else 'hi'
+
+    print(detected_language)
+    translated_sentence = translator.translate(sentence_from_list, dest='de')
+    translated_back = translator.translate(translated_sentence.text, dest=detected_language)
+
+    return translated_back.text.split()
 
 
 def random_deletion(words_in_list):
     n = len(words_in_list)
 
-    if n == 1:  # return if single word
+    if n == 1:
         return words_in_list
 
     filtered_list = [word for word in words_in_list if 0.1 <= random.random() <= 0.9]
@@ -249,7 +256,7 @@ def random_swap(words_in_list, n_swaps=1):
     words = words_in_list[:]
     length = len(words)
 
-    if length <= 1:  # return if single word
+    if length <= 1:
         return words_in_list
 
     for _ in range(n_swaps):
@@ -269,7 +276,6 @@ def remove_stopwords(dataset):
         else:
             return [word for word in sublist if word.lower() not in combined_stopwords]
 
-    # Apply the filter function to each sublist in the dataset
     return [filter_stopwords(sublist) for sublist in dataset]
 
 
@@ -288,9 +294,22 @@ def replace_with_synonym(word):
     for syn in wordnet.synsets(word):
         for lemma in syn.lemmas():
             synonyms.append(lemma.name())
-    # Remove duplicates and original word
     synonyms = list(set(synonyms) - {word})
     if synonyms:
-        return synonyms[0]  # Return the first synonym
+        return synonyms[0]
     else:
         return word
+
+
+def remove_utterences(utterances, labels):
+    ones_indices = [i for i, label in enumerate(labels) if label == 1]
+
+    num_to_remove = int(len(ones_indices) * 0.4)
+
+    indices_to_remove = random.sample(ones_indices, num_to_remove)
+    indices_to_remove_set = set(indices_to_remove)
+
+    filtered_utterances = [utterances[i] for i in range(len(labels)) if i not in indices_to_remove_set]
+    filtered_labels = [labels[i] for i in range(len(labels)) if i not in indices_to_remove_set]
+
+    return filtered_utterances, filtered_labels
