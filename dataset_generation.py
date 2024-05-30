@@ -36,6 +36,7 @@ nltk.download('words')
 nltk.download('wordnet')
 english_word_set = set(words.words())
 
+
 def get_dataloaders(args):
     train_dataset_path, val_dataset_path, _ = _get_dataset_paths(args.experiment_name)
     if args.model == "lstm":
@@ -81,17 +82,12 @@ def _create_dataloader_lstm(train_dataset_path, test_dataset_path, batch_size):
     train_encoded_emotions, train_tokenized_utterances = _extract_relevant_data(train_dataset)
     test_encoded_emotions, test_tokenized_utterances = _extract_relevant_data(test_dataset)
 
-
-    #train_utterences_augmentated = augmentation(train_tokenized_utterances, train_encoded_emotions)
-
     # train_tokenized_utterances = remove_stopwords(train_tokenized_utterances)
-    #test_tokenized_utterances = remove_stopwords(test_tokenized_utterances)
+    # test_tokenized_utterances = remove_stopwords(test_tokenized_utterances)
 
-    #translated_lists, selected_labels = augmentation(train_tokenized_utterances, train_encoded_emotions)
+    translated_lists, selected_labels = augmentation(train_tokenized_utterances, train_encoded_emotions)
 
-    translated_lists, selected_labels = remove_utterences(train_tokenized_utterances, train_encoded_emotions)
-    print(len(train_tokenized_utterances))
-    print(len(translated_lists))
+    # translated_lists, selected_labels = remove_utterences(train_tokenized_utterances, train_encoded_emotions)
 
     train_tokenized_utterances = train_tokenized_utterances + translated_lists
     train_encoded_emotions = train_encoded_emotions + selected_labels
@@ -196,7 +192,7 @@ def _create_dataloader_bert(train_dataset_path, test_dataset_path, batch_size):
 
 def augmentation(utterances, labels):
     # Pick part of dataset that will be augmentated
-    num_to_pick = len(utterances) * 50 // 100
+    num_to_pick = len(utterances) // 2
     random.seed(42)
 
     indices = list(range(len(utterances)))
@@ -208,7 +204,7 @@ def augmentation(utterances, labels):
 
     augmentated_lists = []
     for sublist in selected_utterances:
-        if random.random() < 0.5:
+        if random.random() < 0.4:
             modified_sublist = translate_back_and_fwd(sublist)
             augmentated_lists.append(modified_sublist)
             continue
