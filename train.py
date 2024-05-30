@@ -7,19 +7,21 @@ import torch.nn as nn
 from sklearn.metrics import classification_report
 from torch import optim
 
+import wandb
 from evaluate import evaluate
-from models import LSTM, BERTClassifier
+from models import LSTM, BERTClassifier, EncoderClassifier
 
 
 def train(model, train_dataloader, test_dataloader, device, args):
+    if args.log_wandb:
+        wandb.watch(model)
     best_model = copy.deepcopy(model)
     best_f1 = 0
 
     model.train()
-    # class_weights = train_dataloader.dataset.get_class_weights()
-    # class_weights_tensor = torch.FloatTensor(class_weights).cuda()
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 
     for epoch in range(args.n_epochs):
         model.train()
@@ -37,6 +39,8 @@ def train(model, train_dataloader, test_dataloader, device, args):
 
             if isinstance(model, LSTM):
                 outputs = model(input_ids)
+            elif isinstance(model, EncoderClassifier):
+                outputs = model(input_ids)
             elif isinstance(model, BERTClassifier):
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             else:
@@ -52,6 +56,8 @@ def train(model, train_dataloader, test_dataloader, device, args):
                 actual_labels.extend(labels.cpu().tolist())
                 losses.append(loss.item())
 
+        scheduler.step()
+
         train_results = classification_report(actual_labels, predictions, zero_division=0.0, output_dict=True)
         val_results = evaluate(model=model, test_dataloader=test_dataloader, device=device, output_dict=True)
 
@@ -59,6 +65,13 @@ def train(model, train_dataloader, test_dataloader, device, args):
             best_model = copy.deepcopy(model)
             best_f1 = val_results["weighted avg"]["f1-score"]
             # torch.save(model, f'models/net_latest')
+
+        wandb.log({"Training loss": np.round(np.mean(losses), 3)})
+        wandb.log({"Training accuracy": np.round(train_results["accuracy"], 3)})
+        wandb.log({"Training weighted f1-score": np.round(train_results["weighted avg"]["f1-score"], 3)})
+
+        wandb.log({"Validation accuracy": np.round(val_results["accuracy"], 3)})
+        wandb.log({"Validation weighted f1-score": np.round(val_results["weighted avg"]["f1-score"], 3)})
 
         print("\nEpoch: {}/{} [{} s]"
               .format(epoch,

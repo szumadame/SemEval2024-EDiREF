@@ -10,6 +10,8 @@ def get_args(argv):
                         help='Random seed. If defined all random operations will be reproducible')
     parser.add_argument('--gpuid', nargs="+", type=int, default=[0],
                         help='The list of gpuid, ex:--gpuid 3 1. Negative value means cpu-only')
+    parser.add_argument('--log_wandb', default=False, action='store_true',
+                        help='Log experiment stats into wandb')
 
     # Data
     parser.add_argument('--weighted_sampler', default=False, action='store_true',
@@ -18,7 +20,7 @@ def get_args(argv):
     # Model
     parser.add_argument('--model', type=str, default='lstm', help='Network model')
     parser.add_argument('--lstm_layers', type=int, default=2)
-    parser.add_argument('--dropout', type=float, default=0.0)
+    parser.add_argument('--dropout', type=float, default=0.2)
 
     # Training
     parser.add_argument('--n_epochs', type=int, default=50)

@@ -1,7 +1,7 @@
 import torch
 from sklearn.metrics import classification_report
 
-from models import LSTM, BERTClassifier
+from models import LSTM, BERTClassifier, EncoderClassifier
 
 
 def evaluate(model, test_dataloader, device, output_dict):
@@ -16,6 +16,8 @@ def evaluate(model, test_dataloader, device, output_dict):
             labels = batch['label'].to(device)
 
             if isinstance(model, LSTM):
+                outputs = model(input_ids)
+            elif isinstance(model, EncoderClassifier):
                 outputs = model(input_ids)
             elif isinstance(model, BERTClassifier):
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
