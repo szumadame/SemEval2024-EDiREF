@@ -2,31 +2,33 @@ import torch.nn as nn
 from transformers import BertModel
 
 
-def create_model(model_name, vocab_size, max_length, dropout, output_dim):
-    if model_name == "lstm":
-        return LSTM(vocab_size=vocab_size,
-                    embedding_dim=max_length,
-                    hidden_dim=256,
-                    dropout=dropout,
-                    output_dim=output_dim)
-    elif model_name == "bert":
+def create_model(config, vocab_size, max_length, output_dim):
+    if config.model == "lstm":
+        return LSTMClassifier(vocab_size=vocab_size,
+                              embedding_dim=max_length,
+                              num_layers=config.lstm_layers,
+                              hidden_dim=config.lstm_hidden_dim,
+                              dropout=config.dropout,
+                              output_dim=output_dim)
+    elif config.model == "bert":
         return BERTClassifier("bert-base-multilingual-cased", output_dim=output_dim)
-    elif model_name == "transformer":
+    elif config.model == "transformer":
         return EncoderClassifier(vocab_size=vocab_size,
                                  embedding_dim=max_length,
-                                 num_layers=3,
-                                 num_heads=4,
-                                 dropout=dropout,
+                                 num_layers=config.transformer_layers,
+                                 num_heads=config.transformer_attention_heads,
+                                 dropout=config.dropout,
                                  output_dim=output_dim)
     else:
         raise NotImplemented
 
 
-class LSTM(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout, output_dim):
-        super(LSTM, self).__init__()
+class LSTMClassifier(nn.Module):
+    def __init__(self, vocab_size, embedding_dim, num_layers, hidden_dim, dropout, output_dim):
+        super(LSTMClassifier, self).__init__()
         self.embedding = nn.Embedding(num_embeddings=vocab_size, embedding_dim=embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=2, bidirectional=True, dropout=dropout, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, bidirectional=True, dropout=dropout,
+                            batch_first=True)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, text):

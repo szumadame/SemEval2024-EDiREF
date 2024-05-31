@@ -9,7 +9,7 @@ from torch import optim
 
 import wandb
 from evaluate import evaluate
-from models import LSTM, BERTClassifier, EncoderClassifier
+from models import LSTMClassifier, BERTClassifier, EncoderClassifier
 
 
 def train(model, train_dataloader, test_dataloader, device, args):
@@ -37,7 +37,7 @@ def train(model, train_dataloader, test_dataloader, device, args):
 
             optimizer.zero_grad()
 
-            if isinstance(model, LSTM):
+            if isinstance(model, LSTMClassifier):
                 outputs = model(input_ids)
             elif isinstance(model, EncoderClassifier):
                 outputs = model(input_ids)
@@ -66,12 +66,13 @@ def train(model, train_dataloader, test_dataloader, device, args):
             best_f1 = val_results["weighted avg"]["f1-score"]
             # torch.save(model, f'models/net_latest')
 
-        wandb.log({"Training loss": np.round(np.mean(losses), 3)})
-        wandb.log({"Training accuracy": np.round(train_results["accuracy"], 3)})
-        wandb.log({"Training weighted f1-score": np.round(train_results["weighted avg"]["f1-score"], 3)})
+        if args.log_wandb:
+            wandb.log({"Training loss": np.round(np.mean(losses), 3)})
+            wandb.log({"Training accuracy": np.round(train_results["accuracy"], 3)})
+            wandb.log({"Training weighted f1-score": np.round(train_results["weighted avg"]["f1-score"], 3)})
 
-        wandb.log({"Validation accuracy": np.round(val_results["accuracy"], 3)})
-        wandb.log({"Validation weighted f1-score": np.round(val_results["weighted avg"]["f1-score"], 3)})
+            wandb.log({"Validation accuracy": np.round(val_results["accuracy"], 3)})
+            wandb.log({"Validation weighted f1-score": np.round(val_results["weighted avg"]["f1-score"], 3)})
 
         print("\nEpoch: {}/{} [{} s]"
               .format(epoch,

@@ -20,7 +20,10 @@ def get_args(argv):
     # Model
     parser.add_argument('--model', type=str, default='lstm', help='Network model')
     parser.add_argument('--lstm_layers', type=int, default=2)
+    parser.add_argument('--lstm_hidden_dim', type=int, default=256)
     parser.add_argument('--dropout', type=float, default=0.2)
+    parser.add_argument('--transformer_layers', type=int, default=3)
+    parser.add_argument('--transformer_attention_heads', type=int, default=4)
 
     # Training
     parser.add_argument('--n_epochs', type=int, default=50)
