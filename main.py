@@ -14,7 +14,6 @@ def run(args):
         wandb.init(project=f"SemEval2024_{args.experiment_name}")
         wandb.run.summary["Config"] = vars(args)
 
-
     device = setup_devices(args)
     train_dataloader, val_dataloader = get_dataloaders(args)
 
