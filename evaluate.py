@@ -1,26 +1,31 @@
-import numpy as np
 import torch
+from sklearn.metrics import classification_report
+
+from models import LSTMClassifier, BERTClassifier, EncoderClassifier
 
 
-def evaluate(model, test_dataloader, device):
+def evaluate(model, test_dataloader, device, output_dict):
     model.eval()
-    correctly_predicted = 0
-    total_samples = 0
+    predictions = []
+    actual_labels = []
 
-    for iteration, batch in enumerate(test_dataloader):
-        x, y = batch
-        x = x.to(device)
-        y = y.to(device)
+    with torch.no_grad():
+        for iteration, batch in enumerate(test_dataloader):
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['label'].to(device)
 
-        outputs = model(x)
+            if isinstance(model, LSTMClassifier):
+                outputs = model(input_ids)
+            elif isinstance(model, EncoderClassifier):
+                outputs = model(input_ids)
+            elif isinstance(model, BERTClassifier):
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            else:
+                raise NotImplemented
 
-        correctly_predicted += (get_correct_sum(outputs, y)).item()
-        total_samples += len(y)
+            _, preds = torch.max(outputs, dim=1)
+            predictions.extend(preds.cpu().tolist())
+            actual_labels.extend(labels.cpu().tolist())
 
-    print("Test accuracy: {} %".format(np.round(correctly_predicted * 100 / total_samples, 3)))
-
-
-def get_correct_sum(y_pred, y_test):
-    _, y_pred_tag = torch.max(y_pred, 1)
-    correct_results_sum = (y_pred_tag == y_test).sum().float()
-    return correct_results_sum
+    return classification_report(actual_labels, predictions, zero_division=0.0, output_dict=output_dict)

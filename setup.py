@@ -9,8 +9,6 @@ def setup_devices(args):
     device = torch.device("cuda")
 
     if args.seed:
-        print("Using seed = {}".format(args.seed))
-
         random.seed(args.seed)
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
