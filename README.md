@@ -1,4 +1,7 @@
 # SemEval2024-EDiReF
+It's a NLP task from https://lcs2.in/SemEval2024-EDiReF/ performed during univerity course. Dataset contains mixed-language data. Project was conducted in pair. 
+
+# SemEval2024-EDiReF
 ### Task A: ERC on code-mixed Hindi-English MaSaC
 
 #### LSTM based approach
